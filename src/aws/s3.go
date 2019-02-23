@@ -18,6 +18,17 @@ type s3Info struct {
   bucket  string `hcl:"bucket"`
 	policy  string `hcl:"policy"`
 	version string `hcl:"version"`
+  corsRule s3Cors `hcl:"cors_rule"`
+
+}
+
+type s3Cors struct {
+  AllowedHeaders []*string `hcl:"AllowedHeaders"`
+  AllowedMethods []*string `hcl:"AllowedHeaders"`
+  AllowedOrigins []*string `hcl:"AllowedOrigins"`
+  ExposeHeaders []*string `hcl:"ExposeHeaders"`
+  MaxAgeSeconds *int64 `hcl:"MaxAgeSeconds"`
+
 }
 
 //ListBuckets all S4 buckets
@@ -37,7 +48,7 @@ func (a *ClientS3) ListBuckets() ([]string, error) {
 	return s, nil
 }
 
-//GetBucketACL get all bucket ACL
+//GetBucketPolicy get all bucket ACL
 func (a *ClientS3) GetBucketPolicy(bucketName *string) (string, error) {
 	bucketACL, err := a.Auth.GetBucketPolicy(&s3.GetBucketPolicyInput{Bucket: bucketName})
 	if err != nil {
@@ -67,6 +78,30 @@ func (a *ClientS3) GetBucketVersioning(bucketName *string) (string, error) {
 	}
   version := bucketVersion.Status
 	return *version, nil
+
+}
+
+//GetBucketCors get all bucket ACL
+func (a *ClientS3) GetBucketCors(bucketName *string) ([]*s3.CORSRule, error) {
+	bucketCors, err := a.Auth.GetBucketCors(&s3.GetBucketCorsInput{Bucket: bucketName})
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+
+	return bucketCors.CORSRules, nil
+
+}
+
+//GetBucketLifecycle get all bucket ACL
+func (a *ClientS3) GetBucketLifecycle(bucketName *string) ([]*s3.LifecycleRule, error) {
+	bucketLifecycle, err := a.Auth.GetBucketLifecycleConfiguration(&s3.GetBucketLifecycleConfigurationInput{Bucket: bucketName})
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+
+	return bucketLifecycle.Rules, nil
 
 }
 
@@ -101,6 +136,8 @@ func (a *ClientS3) GetAllInfo() {
 //GetAllInfo Test
 func (a *ClientS3) TestAllInfo() {
 	// var version, bucketName string
+  var allBucketsList  []s3Info
+  t := s3Cors{}
 
 	buckets := s3Info{}
 	// test := "building-price-ranges-export"
@@ -108,15 +145,16 @@ func (a *ClientS3) TestAllInfo() {
 
   policy, _ := a.GetBucketPolicy(&allBuckets[0])
   version, _ := a.GetBucketVersioning(&allBuckets[0])
+  cors, _ := a.GetBucketCors(&allBuckets[0])
+  t = s3Cors{AllowedHeaders: cors[0].AllowedHeaders, AllowedMethods: cors[0].AllowedMethods, AllowedOrigins: cors[0].AllowedOrigins, ExposeHeaders: cors[0].ExposeHeaders, MaxAgeSeconds: cors[0].MaxAgeSeconds}
 
-  if policy == "" {
+  if (policy == "") || (len(cors) == 0) {
     buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0]}
 
   } else {
-    buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0], policy: policy, version: version}
+    buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0], policy: policy, version: version, corsRule: t}
 
   }
-  var allBucketsList  []s3Info
   allBucketsList = append(allBucketsList, buckets)
 
 
