@@ -3,32 +3,28 @@ package aws
 import (
 	"fmt"
 
+	"github.com/Rizbe/terraforming/src/gen"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-  // h "github.com/rodaine/hclencoder"
-  // "log"
-  "github.com/Rizbe/terraforming/src/gen"
 )
 
 type config struct {
 	s3Info *[]s3Info `hcl:"resource aws_s3_bucket"`
 }
 type s3Info struct {
-	name    string `hcl:",key"`
-  bucket  string `hcl:"bucket"`
-	policy  string `hcl:"policy"`
-	version string `hcl:"version"`
-  corsRule s3Cors `hcl:"cors_rule"`
-
+	name     string `hcl:",key"`
+	bucket   string `hcl:"bucket"`
+	policy   string `hcl:"policy"`
+	version  string `hcl:"version"`
+	corsRule s3Cors `hcl:"cors_rule"`
 }
 
 type s3Cors struct {
-  AllowedHeaders []*string `hcl:"AllowedHeaders"`
-  AllowedMethods []*string `hcl:"AllowedHeaders"`
-  AllowedOrigins []*string `hcl:"AllowedOrigins"`
-  ExposeHeaders []*string `hcl:"ExposeHeaders"`
-  MaxAgeSeconds *int64 `hcl:"MaxAgeSeconds"`
-
+	AllowedHeaders []*string `hcl:"AllowedHeaders"`
+	AllowedMethods []*string `hcl:"AllowedHeaders"`
+	AllowedOrigins []*string `hcl:"AllowedOrigins"`
+	ExposeHeaders  []*string `hcl:"ExposeHeaders"`
+	MaxAgeSeconds  *int64    `hcl:"MaxAgeSeconds"`
 }
 
 //ListBuckets all S4 buckets
@@ -76,7 +72,7 @@ func (a *ClientS3) GetBucketVersioning(bucketName *string) (string, error) {
 		}
 		return "", nil
 	}
-  version := bucketVersion.Status
+	version := bucketVersion.Status
 	return *version, nil
 
 }
@@ -132,46 +128,35 @@ func (a *ClientS3) GetAllInfo() {
 
 }
 
-
 //GetAllInfo Test
 func (a *ClientS3) TestAllInfo() {
 	// var version, bucketName string
-  var allBucketsList  []s3Info
-  t := s3Cors{}
+	var allBucketsList []s3Info
+	t := s3Cors{}
 
 	buckets := s3Info{}
 	// test := "building-price-ranges-export"
 	allBuckets, _ := a.ListBuckets()
 
-  policy, _ := a.GetBucketPolicy(&allBuckets[0])
-  version, _ := a.GetBucketVersioning(&allBuckets[0])
-  cors, _ := a.GetBucketCors(&allBuckets[0])
-  t = s3Cors{AllowedHeaders: cors[0].AllowedHeaders, AllowedMethods: cors[0].AllowedMethods, AllowedOrigins: cors[0].AllowedOrigins, ExposeHeaders: cors[0].ExposeHeaders, MaxAgeSeconds: cors[0].MaxAgeSeconds}
+	policy, _ := a.GetBucketPolicy(&allBuckets[0])
+	version, _ := a.GetBucketVersioning(&allBuckets[0])
+	cors, _ := a.GetBucketCors(&allBuckets[0])
+	t = s3Cors{AllowedHeaders: cors[0].AllowedHeaders, AllowedMethods: cors[0].AllowedMethods, AllowedOrigins: cors[0].AllowedOrigins, ExposeHeaders: cors[0].ExposeHeaders, MaxAgeSeconds: cors[0].MaxAgeSeconds}
 
-  if (policy == "") || (len(cors) == 0) {
-    buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0]}
+	if (policy == "") || (len(cors) == 0) {
+		buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0]}
 
-  } else {
-    buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0], policy: policy, version: version, corsRule: t}
+	} else {
+		buckets = s3Info{name: allBuckets[0], bucket: allBuckets[0], policy: policy, version: version, corsRule: t}
 
-  }
-  allBucketsList = append(allBucketsList, buckets)
+	}
+	allBucketsList = append(allBucketsList, buckets)
 
+	input := config{s3Info: &allBucketsList}
+	hcl, err := gen.GenHCL(input)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-  input := config{s3Info: &allBucketsList}
-  hcl, err := gen.GenHCL(input)
-  if err != nil {
-    fmt.Println(err)
-  }
-
-  fmt.Println(string(hcl))
-  // hcl, err := h.Encode(input)
-	// if err != nil {
-	// 	log.Fatal("unable to encode: ", err)
-	// }
-  // fmt.Println(string(hcl))
-  // fmt.Println(buckets)
-  // hcl, _ := gen.GenHCL(buckets)
-  // fmt.Println(hcl)
-
+	fmt.Println(string(hcl))
 }
